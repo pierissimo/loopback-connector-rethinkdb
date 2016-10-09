@@ -521,7 +521,8 @@ RethinkDB.prototype.count = function count(model, where, options, callback) {
     var _this = this;
     var client = this.db;
 
-
+    callback = callback || function(){}
+    
     if (!client) {
         _this.dataSource.once('connected', function () {
             _this.count(model, where, callback);
