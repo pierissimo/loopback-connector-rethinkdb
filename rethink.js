@@ -97,6 +97,13 @@ RethinkDB.prototype.table = function(model) {
     return this._models[model].model.tableName;
 };
 
+//Override define model function
+RethinkDB.prototype.define = function(modelDefinition) {
+    modelDefinition.settings = modelDefinition.settings || {};
+    this._models[modelDefinition.model.modelName] = modelDefinition;
+    this.autoupdate(modelDefinition.model.modelName,function(){})
+};
+
 // creates tables if not exists
 RethinkDB.prototype.autoupdate = function(models, done) {
     var _this = this;
