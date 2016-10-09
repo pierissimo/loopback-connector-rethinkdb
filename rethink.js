@@ -473,6 +473,10 @@ RethinkDB.prototype.all = function all(model, filter, options, callback) {
             }
 
             data.forEach(function(element, index) {
+                 if (element["id"]) {
+                    element[idName]= element["id"];
+                    delete element["id"];
+                }
                 _expandResult(element, _keys);
             });
 
