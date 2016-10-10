@@ -97,6 +97,13 @@ RethinkDB.prototype.table = function(model) {
     return this._models[model].model.tableName;
 };
 
+//Override define model function
+RethinkDB.prototype.define = function(modelDefinition) {
+    modelDefinition.settings = modelDefinition.settings || {};
+    this._models[modelDefinition.model.modelName] = modelDefinition;
+    this.autoupdate(modelDefinition.model.modelName,function(){})
+};
+
 // creates tables if not exists
 RethinkDB.prototype.autoupdate = function(models, done) {
     var _this = this;
@@ -466,6 +473,10 @@ RethinkDB.prototype.all = function all(model, filter, options, callback) {
             }
 
             data.forEach(function(element, index) {
+                 if (element["id"]) {
+                    element[idName]= element["id"];
+                    delete element["id"];
+                }
                 _expandResult(element, _keys);
             });
 
@@ -510,7 +521,8 @@ RethinkDB.prototype.count = function count(model, where, options, callback) {
     var _this = this;
     var client = this.db;
 
-
+    callback = callback || function(){}
+    
     if (!client) {
         _this.dataSource.once('connected', function () {
             _this.count(model, where, callback);
