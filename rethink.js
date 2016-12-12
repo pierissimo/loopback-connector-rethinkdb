@@ -480,17 +480,12 @@ RethinkDB.prototype._observe = function (model, filter, options, callback) {
             _keys = _this._models[model].properties;
             _model = _this._models[model].model;
 
-            cursor.each(function (err, data) {
-                if (err) {
-                    return callback(err);
+            _this._all(model, filter, options, function (err, data) {
+                if (error) {
+                    return callback(error, null);
                 }
-                _this._all(model, filter, options, function (err, data) {
-                    if (error) {
-                        return callback(error, null);
-                    }
 
-                    observer.onNext(data);
-                });
+                observer.onNext(data);
             });
         });
 
