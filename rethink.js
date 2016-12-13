@@ -480,12 +480,18 @@ RethinkDB.prototype._observe = function (model, filter, options, callback) {
             _keys = _this._models[model].properties;
             _model = _this._models[model].model;
 
-            _this._all(model, filter, options, function (err, data) {
-                if (error) {
-                    return callback(error, null);
+            cursor.each(function (err, data) {
+                if (err) {
+                    return callback(err);
                 }
 
-                observer.onNext(data);
+                _this._all(model, filter, options, function (err, data) {
+                    if (error) {
+                        return callback(error, null);
+                    }
+
+                    observer.onNext(data);
+                });
             });
         });
 
@@ -497,7 +503,7 @@ RethinkDB.prototype._observe = function (model, filter, options, callback) {
     });
 
     callback && callback(null, observable);
-}
+};
 
 RethinkDB.prototype._all = function _all(model, filter, options, callback) {
     var _this = this;
