@@ -471,28 +471,31 @@ RethinkDB.prototype._observe = function (model, filter, options, callback) {
 
     var observable = Rx.Observable.create(function (observer) {
 
+        const sendResults = function () {
+            _this._all(model, filter, options, function (error, data) {
+                if (error) {
+                    return observer.onError(error);
+                }
+
+                observer.onNext(data);
+            });
+        }
+
         var runPromise = promise.changes(changesOptions).run(client, function (error, cursor) {
 
-            if (error || !cursor) {
+            if (error) {
                 return callback(error, null);
             }
 
             _keys = _this._models[model].properties;
             _model = _this._models[model].model;
 
-            cursor.each(function (err, data) {
-                if (err) {
-                    return callback(err);
-                }
-
-                _this._all(model, filter, options, function (err, data) {
-                    if (error) {
-                        return callback(error, null);
-                    }
-
-                    observer.onNext(data);
-                });
-            });
+            if (cursor._responses.length === 0) {
+                sendResults();
+            }
+            
+            cursor.on('data', sendResults);
+            cursor.on('error', observer.onError);
         });
 
         return function () {
