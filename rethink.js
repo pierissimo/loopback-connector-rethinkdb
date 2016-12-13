@@ -4,6 +4,7 @@ var moment = require("moment");
 var async = require("async");
 var _ = require("lodash-node");
 var util = require("util");
+var Rx = require('rx');
 
 var Connector = require("loopback-connector").Connector;
 
@@ -396,12 +397,124 @@ RethinkDB.prototype.destroy = function destroy(model, id, callback) {
 };
 
 RethinkDB.prototype.all = function all(model, filter, options, callback) {
+    if (options && options.observe) {
+        this._observe(model, filter, options, callback);
+    } else {
+        this._all(model, filter, options, callback);
+    }
+};
+
+RethinkDB.prototype._observe = function (model, filter, options, callback) {
     var _this = this;
     var client = this.db;
 
     if (!client) {
         _this.dataSource.once('connected', function () {
-            _this.all(model, filter, options, callback);
+            _this._observe(model, filter, options, callback);
+        });
+        return
+    }
+
+    if (!filter) {
+        filter = {};
+    }
+
+    var promise = r.db(_this.database).table(model);
+
+    var idName = this.idName(model)
+
+    if (filter.order) {
+        var keys = filter.order;
+        if (typeof keys === 'string') {
+            keys = keys.split(',');
+        }
+        keys.forEach(function (key) {
+            var m = key.match(/\s+(A|DE)SC$/);
+            key = key.replace(/\s+(A|DE)SC$/, '').trim();
+            if (m && m[1] === 'DE') {
+                promise = promise.orderBy(r.desc(key));
+            } else {
+                promise = promise.orderBy(r.asc(key));
+            }
+        });
+    } else {
+        // default sort by id
+        promise = promise.orderBy({ "index": r.asc("id") });
+    }
+
+    if (filter.where) {
+        if (filter.where[idName]) {
+            var id = filter.where[idName];
+            delete filter.where[idName];
+            filter.where.id = id;
+        }
+        promise = buildWhere(_this, model, filter.where, promise)
+        if (promise === null)
+            return callback && callback(null, [])
+    }
+
+    if (filter.skip) {
+        promise = promise.skip(filter.skip);
+    } else if (filter.offset) {
+        promise = promise.skip(filter.offset);
+    }
+
+    if (filter.limit) {
+        promise = promise.limit(filter.limit);
+    }
+
+    var changesOptions = options && options.changesOptions || {};
+
+    var rQuery = promise.toString()
+
+    //console.log(rQuery)
+
+    var observable = Rx.Observable.create(function (observer) {
+
+        const sendResults = function () {
+            _this._all(model, filter, options, function (error, data) {
+                if (error) {
+                    return observer.onError(error);
+                }
+
+                observer.onNext(data);
+            });
+        }
+
+        var runPromise = promise.changes(changesOptions).run(client, function (error, cursor) {
+
+            if (error) {
+                return callback(error, null);
+            }
+
+            _keys = _this._models[model].properties;
+            _model = _this._models[model].model;
+
+            if (cursor._responses.length === 0) {
+                sendResults();
+            }
+            
+            cursor.on('data', sendResults);
+            cursor.on('error', observer.onError);
+        });
+
+        return function () {
+            runPromise.then(function (cursor) {
+                cursor.close();
+            });
+        };
+    });
+
+    callback && callback(null, observable);
+};
+
+RethinkDB.prototype._all = function _all(model, filter, options, callback) {
+    var _this = this;
+    var client = this.db;
+
+    if (!client) {
+        _this.dataSource.once('connected', function () {
+            _this._all(model, filter, options, callback);
         });
         return
     }
