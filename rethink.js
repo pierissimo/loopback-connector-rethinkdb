@@ -80,6 +80,12 @@ RethinkDB.prototype.connect = function(cb) {
         });
     } else {
         var cOpts = Object.assign({host: s.host, port: s.port, authKey: s.password}, s.additionalSettings);
+        if (cOpts.ssl && cOpts.ssl.ca) {
+            //check if is a base64 encoded string
+            if(/^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{4}|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==)$/.test(cOpts.ssl.ca)){
+                cOpts.ssl.ca = Buffer.from(cOpts.ssl.ca, 'base64');
+            }
+        }
         r.connect(cOpts, function (error, client) {
             self.db = client
             cb && cb(error, client)
