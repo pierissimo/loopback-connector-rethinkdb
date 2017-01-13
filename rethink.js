@@ -40,7 +40,7 @@ exports.initialize = function initializeDataSource(dataSource, callback) {
             var url = require('url').parse(dataSource.settings.url);
             s.host = url.hostname;
             s.port = url.port;
-            s.database = url.pathname.replace(/^\//, '');
+            s.database = (url.pathname || '' ).replace(/^\//, '');
             s.username = url.auth && url.auth.split(':')[0];
             s.password = url.auth && url.auth.split(':')[1];
         }
@@ -79,7 +79,8 @@ RethinkDB.prototype.connect = function(cb) {
             cb && cb(null, self.db);
         });
     } else {
-        r.connect({host: s.host, port: s.port, authKey: s.password}, function (error, client) {
+        var cOpts = Object.assign({host: s.host, port: s.port, authKey: s.password}, s.additionalSettings);
+        r.connect(cOpts, function (error, client) {
             self.db = client
             cb && cb(error, client)
         });
