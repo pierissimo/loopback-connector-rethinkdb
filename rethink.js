@@ -469,8 +469,13 @@ RethinkDB.prototype._observe = function (model, filter, options, callback) {
     if (filter.limit) {
         promise = promise.limit(filter.limit);
     }
-
-    var changesOptions = options && options.changesOptions || {};
+    
+    var defaultChangesOptions = {
+        include_initial: true,
+        include_states: true
+    };
+    
+    var changesOptions = Object.assign({}, defaultChangesOptions, options && options.changesOptions || {});
 
     var rQuery = promise.toString()
 
@@ -478,37 +483,31 @@ RethinkDB.prototype._observe = function (model, filter, options, callback) {
 
     var observable = Rx.Observable.create(function (observer) {
 
-        const sendResults = function () {
+        var sendResults = function () {
             _this._all(model, filter, options, function (error, data) {
                 if (error) {
                     return observer.onError(error);
                 }
-
+                
                 observer.onNext(data);
             });
-        }
+        };
 
-        var runPromise = promise.changes(changesOptions).run(client, function (error, cursor) {
-
-            if (error) {
-                return callback(error, null);
-            }
-
-            _keys = _this._models[model].properties;
-            _model = _this._models[model].model;
-
-            if (cursor._responses.length === 0) {
-                sendResults();
-            }
-            
-            cursor.on('data', sendResults);
-            cursor.on('error', observer.onError);
-        });
+        var feed;
+        promise.changes(changesOptions).run(client).then(function (res) {
+                feed = res;
+                feed.eachAsync(function (item) {
+                    if (item.state === 'ready') {
+                        sendResults();
+                    }
+                });
+            })
+            .catch(observer.onError);
 
         return function () {
-            runPromise.then(function (cursor) {
-                cursor.close();
-            });
+            if(feed){
+                feed.close().catch(function () {});
+            }
         };
     });
 
