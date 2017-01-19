@@ -497,7 +497,7 @@ RethinkDB.prototype._observe = function (model, filter, options, callback) {
         promise.changes(changesOptions).run(client).then(function (res) {
                 feed = res;
                 feed.eachAsync(function (item) {
-                    if (item.state === 'ready') {
+                    if (!item.state) {
                         sendResults();
                     }
                 });
