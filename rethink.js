@@ -496,13 +496,19 @@ RethinkDB.prototype._observe = function (model, filter, options, callback) {
         var feed;
         promise.changes(changesOptions).run(client).then(function (res) {
                 feed = res;
+                var isReady = false; 
                 feed.eachAsync(function (item) {
-                    if (!item.state) {
+                    if(item.state === 'ready'){
+                        isReady = true;
+                        sendResults();
+                    }else if (!item.state && isReady) {
                         sendResults();
                     }
                 });
             })
-            .catch(observer.onError);
+            .catch(function () {
+                observer.onError(err);
+            });
 
         return function () {
             if(feed){
