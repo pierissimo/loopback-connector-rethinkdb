@@ -777,31 +777,41 @@ function _inqFn(k, cond) {
     };
 }
 
+//Handle nested properties
+function getRow(key, r){
+    //get nested row
+    var props = key.split('.');
+    return props.reduce(function (row, val, index) {
+        return row(val);
+    }, r.row)
+}
+
 var operators = {
     "between": function(key, value) {
-        return r.row(key).gt(value[0]).and(r.row(key).lt(value[1]))
+        var row = getRow(key, r);
+        return row.gt(value[0]).and(row.lt(value[1]))
     },
     "gt": function(key, value) {
         if (value === null || value === undefined) return null
-        return r.row(key).gt(value)
+        return getRow(key, r).gt(value)
     },
     "lt": function(key, value) {
         if (value === null || value === undefined) return null
-        return r.row(key).lt(value)
+        return getRow(key, r).lt(value)
     },
     "gte": function(key, value) {
         if (value === null || value === undefined) return null
-        return r.row(key).ge(value)
+        return getRow(key, r).ge(value)
     },
     "lte": function(key, value) {
         if (value === null || value === undefined) return null
-        return r.row(key).le(value)
+        return getRow(key, r).le(value)
     },
     "inq": function(key, value) {
         var query = []
 
         value.forEach(function(v) {
-            query.push(r.row(key).eq(v))
+            query.push(getRow(key, r).eq(v))
         })
 
         var condition = _.reduce(query, function(sum, qq) {
@@ -814,7 +824,7 @@ var operators = {
         var query = []
 
         value.forEach(function(v) {
-            query.push(r.row(key).ne(v))
+            query.push(getRow(key, r).ne(v))
         })
 
         var condition = _.reduce(query, function(sum, qq) {
@@ -824,13 +834,13 @@ var operators = {
         return condition
     },
     "neq": function(key, value) {
-        return r.row(key).ne(value)
+        return getRow(key, r).ne(value)
     },
     "like": function(key, value) {
-        return r.row(key).match(value)
+        return getRow(key, r).match(value)
     },
     "nlike": function(key, value) {
-        return r.row(key).match(value).not()
+        return getRow(key, r).match(value).not()
     }
 }
 
