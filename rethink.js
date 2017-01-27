@@ -460,12 +460,6 @@ RethinkDB.prototype._observe = function (model, filter, options, callback) {
             return callback && callback(null, [])
     }
 
-    if (filter.skip) {
-        promise = promise.skip(filter.skip);
-    } else if (filter.offset) {
-        promise = promise.skip(filter.offset);
-    }
-
     if (filter.limit) {
         promise = promise.limit(filter.limit);
     }
@@ -494,24 +488,31 @@ RethinkDB.prototype._observe = function (model, filter, options, callback) {
         };
 
         var feed;
-        promise.changes(changesOptions).run(client).then(function (res) {
+        promise = promise.changes(changesOptions);
+        if (filter.skip) {
+            promise = promise.skip(filter.skip);
+        } else if (filter.offset) {
+            promise = promise.skip(filter.offset);
+        }
+        
+        promise.run(client).then(function (res) {
                 feed = res;
-                var isReady = false; 
+                var isReady = false;
                 feed.eachAsync(function (item) {
-                    if(item.state === 'ready'){
+                    if (item.state === 'ready') {
                         isReady = true;
                         sendResults();
-                    }else if (!item.state && isReady) {
+                    } else if (!item.state && isReady) {
                         sendResults();
                     }
                 });
             })
-            .catch(function () {
+            .catch(function (err) {
                 observer.onError(err);
             });
 
         return function () {
-            if(feed){
+            if (feed) {
                 feed.close().catch(function () {});
             }
         };
