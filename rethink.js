@@ -465,7 +465,6 @@ RethinkDB.prototype._observe = function (model, filter, options, callback) {
     }
     
     var defaultChangesOptions = {
-        include_initial: true,
         include_states: true
     };
     
@@ -486,6 +485,8 @@ RethinkDB.prototype._observe = function (model, filter, options, callback) {
                 observer.onNext(data);
             });
         };
+
+        sendResults();
 
         var feed;
         promise = promise.changes(changesOptions);
