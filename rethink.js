@@ -711,6 +711,12 @@ RethinkDB.prototype.update = RethinkDB.prototype.updateAll = function update(mod
     if (promise === null)
         return callback && callback(null, { count: 0 })
 
+    Object.keys(data).forEach(function(k) {
+        if(data[k].$add) {
+            data[k] = r.row(k).add(data[k].$add);
+        }
+    })
+
     promise.update(data, { returnChanges: true }).run(client, function(error, result) {
         callback(error, { count: result ? result.replaced : null });
     });
