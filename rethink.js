@@ -463,12 +463,14 @@ RethinkDB.prototype._observe = function (model, filter, options, callback) {
     if (filter.limit) {
         promise = promise.limit(filter.limit);
     }
-    
-    var defaultChangesOptions = {
-        include_states: true
+
+    var defaultOptions = {
+        changesOptions: {
+            include_states: true
+        }
     };
     
-    var changesOptions = Object.assign({}, defaultChangesOptions, options && options.changesOptions || {});
+    var feedOptions = _.defaultsDeep({}, defaultOptions, options);
 
     var rQuery = promise.toString()
 
@@ -485,11 +487,15 @@ RethinkDB.prototype._observe = function (model, filter, options, callback) {
                 observer.onNext(data);
             });
         };
+        
+        if (_.isNumber(feedOptions.throttle)) {
+            sendResults = _.throttle(sendResults, feedOptions.throttle);
+        }
 
         sendResults();
 
         var feed;
-        promise = promise.changes(changesOptions);
+        promise = promise.changes(feedOptions.changesOptions);
         if (filter.skip) {
             promise = promise.skip(filter.skip);
         } else if (filter.offset) {
