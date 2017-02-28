@@ -101,8 +101,9 @@ RethinkDB.prototype.getDefaultIdType = function () {
   return String;
 };
 
-RethinkDB.prototype.table = function(model) {
-    return this._models[model].model.tableName;
+RethinkDB.prototype.tableName = function (model) {
+    const modelSettings = this._models[model].settings;
+    return modelSettings.tableName || modelSettings.pluralName || modelSettings.name;
 };
 
 //Override define model function
@@ -143,8 +144,9 @@ RethinkDB.prototype.autoupdate = function(models, done) {
 
         cursor.toArray(function(error, list) {
             async.each(models, function(model, cb) {
-                if (list.length === 0 || list.indexOf(model) < 0) {
-                    r.db(_this.database).tableCreate(model).run(client, function(error) {
+                const tableName = _this.tableName(model);
+                if (list.length === 0 || list.indexOf(tableName) < 0) {
+                    r.db(_this.database).tableCreate(tableName).run(client, function(error) {
                         if (error) return cb(error);
                         createIndices(cb, model, client);
                     });
@@ -168,7 +170,7 @@ RethinkDB.prototype.autoupdate = function(models, done) {
 
             // Don't attempt to create an index on primary key 'id'
             if (indexName !== 'id' && _hasIndex(_this, model, indexName) && list.indexOf(indexName) < 0) {
-                var query = r.db(_this.database).table(model);
+                var query = r.db(_this.database).table(_this.tableName(model));
                 if (indexFunction) {
                     query = query.indexCreate(indexName, indexFunction, indexOption);
                 }
@@ -183,7 +185,7 @@ RethinkDB.prototype.autoupdate = function(models, done) {
         }
 
         if (!_.isEmpty(indexCollection)) {
-            r.db(_this.database).table(model).indexList().run(client, function(error, cursor) {
+            r.db(_this.database).table(_this.tableName(model)).indexList().run(client, function(error, cursor) {
                 if (error) return cb(error);
 
                 cursor.toArray(function(error, list) {
@@ -232,7 +234,7 @@ RethinkDB.prototype.isActual = function(cb) {
                     actual = false;
                     cb2();
                 } else {
-                    r.db(_this.database).table(model).indexList().run(client, function(error, cursor) {
+                    r.db(_this.database).table(_this.tableName(model)).indexList().run(client, function(error, cursor) {
                         if (error) return cb2(error);
 
                         cursor.toArray(function(error, list) {
@@ -304,7 +306,7 @@ RethinkDB.prototype.save = function (model, data, callback, strict, returnObject
             data[key] = null;
     });
 
-    r.db(_this.database).table(model).insert(data, { conflict: strict ? "error": "update", returnChanges: true }).run(client, function (err, m) {
+    r.db(_this.database).table(_this.tableName(model)).insert(data, { conflict: strict ? "error": "update", returnChanges: true }).run(client, function (err, m) {
         err = err || m.first_error && new Error(m.first_error);
         if (err) {
             callback && callback(err)
@@ -345,7 +347,7 @@ RethinkDB.prototype.exists = function (model, id, callback) {
         return
     }
 
-    r.db(_this.database).table(model).get(id).run(client, function (err, data) {
+    r.db(_this.database).table(_this.tableName(model)).get(id).run(client, function (err, data) {
         callback(err, !!(!err && data));
     });
 };
@@ -364,7 +366,7 @@ RethinkDB.prototype.find = function find(model, id, options, callback) {
 
     var idName = this.idName(model)
 
-    var promise = r.db(_this.database).table(model)
+    var promise = r.db(_this.database).table(_this.tableName(model))
 
     if (idName == "id")
         promise = promise.get(id)
@@ -398,7 +400,7 @@ RethinkDB.prototype.destroy = function destroy(model, id, callback) {
         return
     }
 
-    r.db(_this.database).table(model).get(id).delete().run(client, function(error, result) {
+    r.db(_this.database).table(_this.tableName(model)).get(id).delete().run(client, function(error, result) {
         callback(error);
     });
 };
@@ -426,7 +428,7 @@ RethinkDB.prototype._observe = function (model, filter, options, callback) {
         filter = {};
     }
 
-    var promise = r.db(_this.database).table(model);
+    var promise = r.db(_this.database).table(_this.tableName(model));
 
     var idName = this.idName(model)
 
@@ -543,7 +545,7 @@ RethinkDB.prototype._all = function _all(model, filter, options, callback) {
         filter = {};
     }
 
-    var promise = r.db(_this.database).table(model);
+    var promise = r.db(_this.database).table(_this.tableName(model));
 
     var idName = this.idName(model)
 
@@ -638,7 +640,7 @@ RethinkDB.prototype.destroyAll = function destroyAll(model, where, callback) {
         where = undefined
     }
 
-    var promise = r.db(_this.database).table(model)
+    var promise = r.db(_this.database).table(_this.tableName(model))
     if (where !== undefined)
         promise = buildWhere(_this, model, where, promise)
 
@@ -663,7 +665,7 @@ RethinkDB.prototype.count = function count(model, where, options, callback) {
         return
     }
 
-    var promise = r.db(_this.database).table(model);
+    var promise = r.db(_this.database).table(_this.tableName(model));
 
     if (where && typeof where === "object")
         promise = buildWhere(_this, model, where, promise);
@@ -693,7 +695,7 @@ RethinkDB.prototype.updateAttributes = function updateAttrs(model, id, data, cb)
         if (data[key] === undefined)
             data[key] = null;
     });
-    r.db(_this.database).table(model).get(id).update(data).run(client, function(err, object) {
+    r.db(_this.database).table(_this.tableName(model)).get(id).update(data).run(client, function(err, object) {
         cb(err, data);
     });
 };
@@ -710,7 +712,7 @@ RethinkDB.prototype.update = RethinkDB.prototype.updateAll = function update(mod
         return
     }
 
-    var promise = r.db(_this.database).table(model)
+    var promise = r.db(_this.database).table(_this.tableName(model))
     if (where !== undefined)
         promise = buildWhere(_this, model, where, promise)
 
