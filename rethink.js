@@ -102,8 +102,8 @@ RethinkDB.prototype.getDefaultIdType = function () {
 };
 
 RethinkDB.prototype.tableName = function (model) {
-    const modelSettings = this._models[model].settings;
-    return modelSettings.tableName || modelSettings.pluralName || modelSettings.name;
+    var modelSettings = this._models[model].settings;
+    return modelSettings.tableName || modelSettings.plural || model;
 };
 
 //Override define model function
