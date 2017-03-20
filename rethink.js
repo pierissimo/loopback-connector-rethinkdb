@@ -894,7 +894,7 @@ function buildFilter(where) {
                 })
             } else {
                 // k is field equality
-                filter.push(r.row(k).eq(condition))
+                filter.push(getRow(k, r).eq(condition))
             }
         }
 
