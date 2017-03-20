@@ -82,12 +82,8 @@ RethinkDB.prototype.connect = function(cb) {
         var cOpts = Object.assign({host: s.host, port: s.port, authKey: s.password}, s.additionalSettings);
         if (cOpts.ssl && cOpts.ssl.ca) {
             //check if is a base64 encoded string
-            var isBase64Encoded = /^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{4}|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==)$/.test(cOpts.ssl.ca);
-            
-            if (isBase64Encoded) {
+            if(/^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{4}|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==)$/.test(cOpts.ssl.ca)){
                 cOpts.ssl.ca = Buffer.from(cOpts.ssl.ca, 'base64');
-            } else {
-                delete cOpts.ssl;
             }
         }
         r.connect(cOpts, function (error, client) {
@@ -445,9 +441,9 @@ RethinkDB.prototype._observe = function (model, filter, options, callback) {
             var m = key.match(/\s+(A|DE)SC$/);
             key = key.replace(/\s+(A|DE)SC$/, '').trim();
             if (m && m[1] === 'DE') {
-                promise = promise.orderBy({ index: r.desc(key) });
-              } else {
-                promise = promise.orderBy({ index: r.asc(key) });
+                promise = promise.orderBy(r.desc(key));
+            } else {
+                promise = promise.orderBy(r.asc(key));
             }
         });
     } else {
@@ -472,10 +468,7 @@ RethinkDB.prototype._observe = function (model, filter, options, callback) {
 
     var defaultOptions = {
         changesOptions: {
-            include_initial: true,
-            include_states: true,
-            include_types: true,
-            include_offsets: Boolean(filter.limit)
+            include_states: true
         }
     };
     
@@ -487,6 +480,22 @@ RethinkDB.prototype._observe = function (model, filter, options, callback) {
 
     var observable = Rx.Observable.create(function (observer) {
 
+        var sendResults = function () {
+            _this._all(model, filter, options, function (error, data) {
+                if (error) {
+                    return observer.onError(error);
+                }
+                
+                observer.onNext(data);
+            });
+        };
+        
+        if (_.isNumber(feedOptions.throttle)) {
+            sendResults = _.throttle(sendResults, feedOptions.throttle);
+        }
+
+        sendResults();
+
         var feed;
         promise = promise.changes(feedOptions.changesOptions);
         if (filter.skip) {
@@ -495,28 +504,27 @@ RethinkDB.prototype._observe = function (model, filter, options, callback) {
             promise = promise.skip(filter.offset);
         }
         
-      try{
         promise.run(client).then(function (res) {
-              feed = res;
-              feed.eachAsync(function (item) {
-                if (!item.state) {
-                  observer.onNext(item);
-                }
-              });
+                feed = res;
+                var isReady = false;
+                feed.eachAsync(function (item) {
+                    if (item.state === 'ready') {
+                        isReady = true;
+                        sendResults();
+                    } else if (!item.state && isReady) {
+                        sendResults();
+                    }
+                });
             })
             .catch(function (err) {
-              observer.onError(err);
+                observer.onError(err);
             });
 
         return function () {
-          if (feed) {
-            feed.close().catch(function () {});
-          }
-        }; 
-      }
-      catch (err) {
-        callback && callback(err);
-      }
+            if (feed) {
+                feed.close().catch(function () {});
+            }
+        };
     });
 
     callback && callback(null, observable);
