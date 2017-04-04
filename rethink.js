@@ -604,8 +604,8 @@ RethinkDB.prototype._all = function _all(model, filter, options, callback) {
                 return callback(err);
             }
 
-            _keys = _this._models[model].properties;
-            _model = _this._models[model].model;
+            var _keys = _this._models[model].properties;
+            var _model = _this._models[model].model;
 
             data.forEach(function(element, index) {
                  if (element["id"] && idName !== 'id') {
