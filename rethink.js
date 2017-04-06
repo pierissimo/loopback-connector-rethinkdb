@@ -599,13 +599,13 @@ RethinkDB.prototype._all = function _all(model, filter, options, callback) {
             return callback(error, null);
         }
 
-        _keys = _this._models[model].properties;
-        _model = _this._models[model].model;
-
         cursor.toArray(function (err, data) {
             if (err) {
                 return callback(err);
             }
+
+            var _keys = _this._models[model].properties;
+            var _model = _this._models[model].model;
 
             data.forEach(function(element, index) {
                  if (element["id"] && idName !== 'id') {
