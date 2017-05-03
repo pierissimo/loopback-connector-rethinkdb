@@ -405,21 +405,13 @@ RethinkDB.prototype.destroy = function destroy(model, id, callback) {
     });
 };
 
-RethinkDB.prototype.all = function all(model, filter, options, callback) {
-    if (options && options.observe) {
-        this._observe(model, filter, options, callback);
-    } else {
-        this._all(model, filter, options, callback);
-    }
-};
-
-RethinkDB.prototype._observe = function (model, filter, options, callback) {
+RethinkDB.prototype.changeFeed = function (model, filter, options) {
     var _this = this;
     var client = this.db;
 
     if (!client) {
         _this.dataSource.once('connected', function () {
-            _this._observe(model, filter, options, callback);
+            _this.changeFeed(model, filter, options);
         });
         return
     }
@@ -458,8 +450,8 @@ RethinkDB.prototype._observe = function (model, filter, options, callback) {
             filter.where.id = id;
         }
         promise = buildWhere(_this, model, filter.where, promise)
-        if (promise === null)
-            return callback && callback(null, [])
+        /*if (promise === null)
+            return callback && callback(null, [])*/
     }
 
     if (filter.limit) {
@@ -481,7 +473,7 @@ RethinkDB.prototype._observe = function (model, filter, options, callback) {
     var observable = Rx.Observable.create(function (observer) {
 
         var sendResults = function () {
-            _this._all(model, filter, options, function (error, data) {
+            _this.all(model, filter, options, function (error, data) {
                 if (error) {
                     return observer.onError(error);
                 }
@@ -527,16 +519,16 @@ RethinkDB.prototype._observe = function (model, filter, options, callback) {
         };
     });
 
-    callback && callback(null, observable);
+    return observable;
 };
 
-RethinkDB.prototype._all = function _all(model, filter, options, callback) {
+RethinkDB.prototype.all = function all(model, filter, options, callback) {
     var _this = this;
     var client = this.db;
 
     if (!client) {
         _this.dataSource.once('connected', function () {
-            _this._all(model, filter, options, callback);
+            _this.all(model, filter, options, callback);
         });
         return
     }
