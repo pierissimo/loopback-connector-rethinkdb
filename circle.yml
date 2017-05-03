@@ -1,4 +1,6 @@
 dependencies:
+    pre:
+        - sudo apt-get install rethinkdb
     override:
         - echo -e "//registry.npmjs.org/:_authToken=$NPM_TOKEN\nscope=@oneflow" > .npmrc
         - npm update
