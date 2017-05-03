@@ -8,14 +8,14 @@ var config = {
         db: "test"
     };
 
-if (process.env.CI) {
+/*if (process.env.CI) {
   config = {
     host: 'localhost',
     database: 'lb-ds-mongodb-test-' + (
       process.env.TRAVIS_BUILD_NUMBER || process.env.BUILD_NUMBER || '1'
     ),
   };
-}
+}*/
 
 process.env.TESTING = process.env.CI || process.env.NODE_ENV;
 
