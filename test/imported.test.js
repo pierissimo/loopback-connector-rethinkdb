@@ -1,5 +1,5 @@
 describe('rethinkdb imported features', function () {
-  this.timeout(25000);
+  this.timeout(60000);
   before(function () {
     require('./init.js');
   });
