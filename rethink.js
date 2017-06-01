@@ -104,7 +104,7 @@ RethinkDB.prototype.getDefaultIdType = function () {
 
 RethinkDB.prototype.tableName = function (model) {
   var modelClass = this._models[model];
-  if (modelClass.settings.mongodb) {
+  if (modelClass.settings.rethinkdb) {
     model = _.get(modelClass, 'settings.rethinkdb.collection') || modelClass.settings.plural || model;
   }
   return model;
