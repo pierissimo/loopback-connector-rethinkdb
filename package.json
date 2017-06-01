@@ -1,6 +1,6 @@
 {
   "name": "loopback-connector-rethinkdb",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "RethinkDB connector for Loopback.io",
   "main": "index.js",
   "scripts": {
@@ -26,7 +26,7 @@
     "semicov": "^0.1.1-2",
     "should": "^8.0.2"
   },
-  "repository": "http://github.com/fuwaneko/loopback-connector-rethinkdb",
-  "author": "Dmitry Gorbunov <atskiisotona@gmail.com>",
+  "repository": "http://github.com/Oneflow/loopback-connector-rethinkdb",
+  "author": "Oneflow",
   "license": "MIT"
 }
