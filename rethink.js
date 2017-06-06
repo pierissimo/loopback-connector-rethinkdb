@@ -117,90 +117,87 @@ RethinkDB.prototype.define = function (modelDefinition) {
   // this.autoupdate(modelDefinition.model.modelName,function(){})
 };
 
-// creates tables if not exists
-RethinkDB.prototype.autoupdate = function (models, done) {
+
+RethinkDB.prototype.autoupdate = function (models, cb) {
   var _this = this;
-  var client = this.db;
-
-  if (!client) {
-    _this.dataSource.once('connected', function () {
-      _this.autoupdate(models, done);
-    });
-    return;
-  }
-
-  if ((!done) && ('function' === typeof models)) {
-    done = models;
-    models = undefined;
-  }
-
-  // First argument is a model name
-  if ('string' === typeof models) {
-    models = [models];
-  }
-
-  models = _.uniq(models || Object.keys(_this._models));
-
-  r.db(_this.database).tableList().run(client, function (error, cursor) {
-    if (error) {
-      return done(error);
+  if (_this.db) {
+    if (_this.debug) {
+      debug('autoupdate');
+    }
+    if ((!cb) && ('function' === typeof models)) {
+      cb = models;
+      models = undefined;
+    }
+    // First argument is a model name
+    if ('string' === typeof models) {
+      models = [models];
     }
 
-    cursor.toArray(function (error, list) {
-      async.each(models, function (model, cb) {
-        const tableName = _this.tableName(model);
-        if (list.length === 0 || list.indexOf(tableName) < 0) {
-          r.db(_this.database).tableCreate(tableName).run(client, function (error) {
-            if (error) return cb(error);
-            createIndices(cb, model, client);
-          });
-        } else {
-          createIndices(cb, model, client);
-        }
-      }, function (e) {
-        done(e);
-      });
-    });
-  });
+    models = models || Object.keys(_this._models);
 
-  function createIndices(cb, model, client) {
-    var properties = _this._models[model].properties;
-    var settings = _this._models[model].settings;
-    var indexCollection = _.extend({}, properties, settings);
+    var enableGeoIndexing = this.settings.enableGeoIndexing === true;
 
-    function checkAndCreate(list, indexName, indexOption, indexFunction, cb3) {
-      // Don't attempt to create an index on primary key 'id'
-      if (indexName !== 'id' && _hasIndex(_this, model, indexName) && list.indexOf(indexName) < 0) {
-        var query = r.db(_this.database).table(_this.tableName(model));
-        if (indexFunction) {
-          query = query.indexCreate(indexName, indexFunction, indexOption);
-        } else {
-          query = query.indexCreate(indexName, indexOption);
+    async.each(models, function (model, modelCallback) {
+      var indexes = _this._models[model].settings.indexes || [];
+      var indexList = [];
+      var index = {};
+      var options = {};
+
+      if (typeof indexes === 'object') {
+        for (var indexName in indexes) {
+          index = indexes[indexName];
+          if (index.keys) {
+            // The index object has keys
+            options = index.options || {};
+            index.options = options;
+          } else {
+            index = {
+              keys: index,
+              options: {},
+            };
+          }
+          index.name = indexName;
+          indexList.push(index);
         }
-        query.run(client, cb3);
-      } else {
-        cb3();
+      } else if (Array.isArray(indexes)) {
+        indexList = indexList.concat(indexes);
       }
-    }
 
-    if (!_.isEmpty(indexCollection)) {
-      r.db(_this.database).table(_this.tableName(model)).indexList().run(client, function (error, cursor) {
+      if (_this.debug) {
+        debug('create indexes: ', indexList);
+      }
+
+      r.db(_this.database).table(_this.tableName(model)).indexList().run(_this.db, function (error, cursor) {
         if (error) return cb(error);
 
-        cursor.toArray(function (error, list) {
+        cursor.toArray(function (error, alreadyPresentIndexes) {
           if (error) return cb(error);
 
-          async.each(Object.keys(indexCollection), function (indexName, cb4) {
-            var indexConf = indexCollection[indexName];
-            checkAndCreate(list, indexName, indexConf.indexOption || {}, indexConf.indexFunction, cb4);
-          }, function (err) {
-            cb(err);
-          });
+          async.each(indexList, function (index, indexCallback) {
+            if (_this.debug) {
+              debug('createIndex: ', index);
+            }
+
+            if (alreadyPresentIndexes.includes(index.name)) {
+              return indexCallback();
+            }
+
+            var query = r.db(_this.database).table(_this.tableName(model));
+            var keys = Object.keys(index.fields || index.keys).map(function (key) {
+              return _this.getRow(model, key);
+            });
+            query = query.indexCreate(index.name, keys.length === 1 ? keys[0] : keys, index.options);
+            query.run(_this.db, indexCallback);
+            
+          }, modelCallback);
+
         });
       });
-    } else {
-      cb();
-    }
+    }, cb);
+  } else {
+    _this.dataSource.once('connected', function () {
+      _this.autoupdate(models, cb);
+    });
   }
 };
 
@@ -241,57 +238,18 @@ RethinkDB.prototype.automigrate = _.debounce(function (models, done) {
           r.db(_this.database).tableDrop(tableName).run(client, function (error) {
             r.db(_this.database).tableCreate(tableName).run(client, function (error) {
               if (error) return cb(error);
-              createIndices(cb, model, client);
+              cb();
             });
           });
         } else {
           cb();
         }
-      }, function (e) {
-        done(e);
+      }, function (err) {
+        if(err) return done(e);
+        _this.autoupdate(models, done);
       });
     });
   });
-
-  function createIndices(cb, model, client) {
-    var properties = _this._models[model].properties;
-    var settings = _this._models[model].settings;
-    var indexCollection = _.extend({}, properties, settings);
-
-    function checkAndCreate(list, indexName, indexOption, indexFunction, cb3) {
-      // Don't attempt to create an index on primary key 'id'
-      if (indexName !== 'id' && _hasIndex(_this, model, indexName) && list.indexOf(indexName) < 0) {
-        var query = r.db(_this.database).table(_this.tableName(model));
-        if (indexFunction) {
-          query = query.indexCreate(indexName, indexFunction, indexOption);
-        } else {
-          query = query.indexCreate(indexName, indexOption);
-        }
-        query.run(client, cb3);
-      } else {
-        cb3();
-      }
-    }
-
-    if (!_.isEmpty(indexCollection)) {
-      r.db(_this.database).table(_this.tableName(model)).indexList().run(client, function (error, cursor) {
-        if (error) return cb(error);
-
-        cursor.toArray(function (error, list) {
-          if (error) return cb(error);
-
-          async.each(Object.keys(indexCollection), function (indexName, cb4) {
-            var indexConf = indexCollection[indexName];
-            checkAndCreate(list, indexName, indexConf.indexOption || {}, indexConf.indexFunction, cb4);
-          }, function (err) {
-            cb(err);
-          });
-        });
-      });
-    } else {
-      cb();
-    }
-  }
 }, 4000);
 
 // checks if database needs to be actualized
