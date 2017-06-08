@@ -480,11 +480,9 @@ RethinkDB.prototype.changeFeed = function (model, filter, options) {
       var m = key.match(/\s+(A|DE)SC$/);
       key = key.replace(/\s+(A|DE)SC$/, '').trim();
       if (m && m[1] === 'DE') {
-        var row = _this.getRow(model, key);
-        promise = promise.orderBy(r.desc(key));
+        promise = promise.orderBy({ index: r.desc(key) });
       } else {
-        var row = _this.getRow(model, key);
-        promise = promise.orderBy(r.asc(key));
+        promise = promise.orderBy({ index: r.asc(key) });
       }
     });
   } else {
@@ -602,11 +600,9 @@ RethinkDB.prototype.all = function all(model, filter, options, callback) {
       var m = key.match(/\s+(A|DE)SC$/);
       key = key.replace(/\s+(A|DE)SC$/, '').trim();
       if (m && m[1] === 'DE') {
-        var row = _this.getRow(model, key);
-        promise = promise.orderBy(r.desc(row));
+        promise = promise.orderBy({ index: r.desc(key) });
       } else {
-        var row = _this.getRow(model, key);
-        promise = promise.orderBy(r.asc(row));
+        promise = promise.orderBy({index:r.asc(key)});
       }
     });
   } else {
