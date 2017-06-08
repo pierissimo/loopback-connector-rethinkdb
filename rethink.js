@@ -507,6 +507,10 @@ RethinkDB.prototype.changeFeed = function (model, filter, options) {
     promise = promise.limit(filter.limit);
   }
 
+  if (!_.isEmpty(filter.fields)) {
+    promise = _this.buildPluck(model, filter.fields, promise);  
+  }
+
   var defaultOptions = {
     changesOptions: {
       include_states: true,
@@ -633,6 +637,10 @@ RethinkDB.prototype.all = function all(model, filter, options, callback) {
 
   if (filter.limit) {
     promise = promise.limit(filter.limit);
+  }
+
+  if (!_.isEmpty(filter.fields)) {
+    promise = _this.buildPluck(model, filter.fields, promise);
   }
 
   var rQuery = promise.toString();
@@ -852,6 +860,15 @@ RethinkDB.prototype.buildFilter = function (where, model) {
   return _.reduce(filter, function (s, f) {
     return s.and(f);
   });
+};
+
+RethinkDB.prototype.buildPluck = function (model, fields, promise) {
+  var pluckObj = fields.reduce(function (acc, fieldName) {
+    _.set(acc, fieldName, true);
+    return acc;
+  }, {});
+
+  return promise.pluck(pluckObj);
 };
 
 // Handle nested properties
