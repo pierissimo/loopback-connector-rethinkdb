@@ -503,12 +503,12 @@ RethinkDB.prototype.changeFeed = function (model, filter, options) {
      return callback && callback(null, []) */
   }
 
+  if (!_.isEmpty(filter.fields)) {
+    promise = _this.buildPluck(model, filter.fields, promise);
+  }
+  
   if (filter.limit) {
     promise = promise.limit(filter.limit);
-  }
-
-  if (!_.isEmpty(filter.fields)) {
-    promise = _this.buildPluck(model, filter.fields, promise);  
   }
 
   var defaultOptions = {
@@ -635,12 +635,12 @@ RethinkDB.prototype.all = function all(model, filter, options, callback) {
     promise = promise.skip(filter.offset);
   }
 
-  if (filter.limit) {
-    promise = promise.limit(filter.limit);
-  }
-
   if (!_.isEmpty(filter.fields)) {
     promise = _this.buildPluck(model, filter.fields, promise);
+  }
+  
+  if (filter.limit) {
+    promise = promise.limit(filter.limit);
   }
 
   var rQuery = promise.toString();
