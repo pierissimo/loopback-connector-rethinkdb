@@ -602,7 +602,7 @@ RethinkDB.prototype.all = function all(model, filter, options, callback) {
       if (m && m[1] === 'DE') {
         promise = promise.orderBy({ index: r.desc(key) });
       } else {
-        promise = promise.orderBy({index:r.asc(key)});
+        promise = promise.orderBy({ index: r.asc(key) });
       }
     });
   } else {
