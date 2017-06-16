@@ -600,9 +600,9 @@ RethinkDB.prototype.all = function all(model, filter, options, callback) {
       var m = key.match(/\s+(A|DE)SC$/);
       key = key.replace(/\s+(A|DE)SC$/, '').trim();
       if (m && m[1] === 'DE') {
-        promise = promise.orderBy({ index: r.desc(key) });
+        promise = promise.orderBy(r.desc(key));
       } else {
-        promise = promise.orderBy({ index: r.asc(key) });
+        promise = promise.orderBy(r.asc(key));
       }
     });
   } else {
