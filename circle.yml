@@ -1,0 +1,43 @@
+machine:
+  node:
+    version: 4
+
+test:
+    override:
+      - npm run cover
+    post:
+      - bash <(curl -s https://codecov.io/bash) -t $CODECOV_TOKEN
+
+dependencies:
+    pre:
+        - source /etc/lsb-release && echo "deb http://download.rethinkdb.com/apt $DISTRIB_CODENAME main" | sudo tee /etc/apt/sources.list.d/rethinkdb.list
+        - wget -qO- http://download.rethinkdb.com/apt/pubkey.gpg | sudo apt-key add -
+        - sudo apt-get update
+        - sudo apt-get install rethinkdb
+        - sudo cp /etc/rethinkdb/default.conf.sample /etc/rethinkdb/instances.d/instance1.conf
+        - sudo /etc/init.d/rethinkdb restart
+    override:
+        - echo -e "//registry.npmjs.org/:_authToken=$NPM_TOKEN\nscope=@oneflow" > .npmrc
+        - npm update
+
+deployment:
+    production:
+        branch: master
+        commands:
+            - npm publish
+            # tag the master branch and push
+            - git config --global user.email "circleci@oneflowsystems.com"
+            - git config --global user.name "Circle CI"
+            - git reset --hard HEAD
+            - git tag "v`grep '"version"' package.json | egrep -o "[0-9]+.[0-9]+.[0-9]+"`"
+            - git push --tags
+            # checkout development and bump the version
+            - git checkout -b circle-ci-version-bump origin/development
+            - git pull
+            - npm --no-git-tag-version version patch
+            - git add package.json
+            - git commit -m "`grep '"version"' package.json | egrep -o "[0-9]+.[0-9]+.[0-9]+"`"
+            - git push -u origin circle-ci-version-bump:development --follow-tags
+            # checkout master again and delete our local branch
+            - git checkout master
+            - git branch -D circle-ci-version-bump
