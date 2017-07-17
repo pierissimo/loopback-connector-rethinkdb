@@ -1,32 +1,39 @@
 {
-  "name": "loopback-connector-rethinkdb",
-  "version": "1.0.9",
-  "description": "RethinkDB connector for Loopback.io",
-  "main": "index.js",
-  "scripts": {
-    "test": "./node_modules/.bin/mocha test/imported.test.js"
-  },
-  "dependencies": {
-    "async": "^1.3.0",
-    "bluebird": "2.11.0",
-    "lodash": "4.17.4",
-    "loopback-connector": "^4.0.0",
-    "moment": "^2.10.2",
-    "rethinkdb": "2.3.3",
-    "rx": "4.1.0"
-  },
-  "devDependencies": {
-    "bluebird": "^2.9.25",
-    "eslint": "3.19.0",
-    "eslint-config-loopback": "8.0.0",
-    "grunt": "^0.4.5",
-    "grunt-release": "^0.10.0",
-    "loopback-datasource-juggler": "^3.0.0",
-    "mocha": "^2.1.0",
-    "semicov": "^0.1.1-2",
-    "should": "^8.0.2"
-  },
-  "repository": "http://github.com/Oneflow/loopback-connector-rethinkdb",
-  "author": "Oneflow",
-  "license": "MIT"
+	"name": "loopback-connector-rethinkdb",
+	"version": "1.0.10",
+	"description": "RethinkDB connector for Loopback.io",
+	"main": "index.js",
+	"scripts": {
+		"test": "mocha test/imported.test.js",
+		"cover": "nyc --reporter=lcov mocha test/imported.test.js"
+	},
+	"dependencies": {
+		"async": "^1.3.0",
+		"bluebird": "2.11.0",
+		"lodash": "4.17.4",
+		"loopback-connector": "^4.0.0",
+		"moment": "^2.10.2",
+		"rethinkdb": "2.3.3",
+		"rethinkdbdash": "2.3.29",
+		"rx": "4.1.0"
+	},
+	"devDependencies": {
+		"bluebird": "^2.9.25",
+		"eslint": "3.19.0",
+		"eslint-config-airbnb": "15.0.2",
+		"eslint-config-loopback": "8.0.0",
+		"eslint-plugin-import": "2.7.0",
+		"eslint-plugin-jsx-a11y": "5.1.1",
+		"eslint-plugin-react": "7.1.0",
+		"grunt": "^0.4.5",
+		"grunt-release": "^0.10.0",
+		"loopback-datasource-juggler": "^3.0.0",
+		"mocha": "^2.1.0",
+		"nyc": "11.0.3",
+		"semicov": "^0.1.1-2",
+		"should": "^8.0.2"
+	},
+	"repository": "http://github.com/Oneflow/loopback-connector-rethinkdb",
+	"author": "Oneflow",
+	"license": "MIT"
 }

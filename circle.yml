@@ -1,3 +1,13 @@
+machine:
+  node:
+    version: 4
+
+test:
+    override:
+      - npm run cover
+    post:
+      - bash <(curl -s https://codecov.io/bash) -t $CODECOV_TOKEN
+
 dependencies:
     pre:
         - source /etc/lsb-release && echo "deb http://download.rethinkdb.com/apt $DISTRIB_CODENAME main" | sudo tee /etc/apt/sources.list.d/rethinkdb.list
